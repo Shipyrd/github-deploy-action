@@ -20,7 +20,6 @@ jobs:
           api-token: ${{ secrets.SHIPYRD_TOKEN }}
           shipyrd-url: ${{ inputs.shipyrd-url }}
           status: pre-deploy
-          service: test-app
           destination: staging
 
   test-post-deploy:
@@ -34,7 +33,6 @@ jobs:
         with:
           api-token: ${{ secrets.SHIPYRD_TOKEN }}
           shipyrd-url: ${{ inputs.shipyrd-url }}
-          service: test-app
 
   test-failed:
     name: Test failed notification
@@ -48,4 +46,3 @@ jobs:
           api-token: ${{ secrets.SHIPYRD_TOKEN }}
           shipyrd-url: ${{ inputs.shipyrd-url }}
           status: failed
-          service: test-app

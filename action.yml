@@ -22,8 +22,9 @@ inputs:
     default: "post-deploy"
 
   service:
-    description: "The service/application name as it appears in Shipyrd."
-    required: true
+    description: "The service name to include in the service_version field (e.g. my-app). Optional — the application is identified by the API token."
+    required: false
+    default: ""
 
   destination:
     description: "The deploy destination (e.g. production, staging)."
@@ -61,7 +62,7 @@ runs:
         DEPLOY_COMMIT_MESSAGE: ${{ inputs.commit-message || env.COMMIT_MESSAGE }}
       run: |
         RECORDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-        SERVICE_VERSION="${DEPLOY_SERVICE}@${DEPLOY_VERSION}"
+        SERVICE_VERSION="${DEPLOY_SERVICE:+${DEPLOY_SERVICE}@}${DEPLOY_VERSION}"
 
         PAYLOAD=$(jq -n \
           --arg status "$DEPLOY_STATUS" \
@@ -69,10 +70,9 @@ runs:
           --arg version "$DEPLOY_VERSION" \
           --arg commit_message "$DEPLOY_COMMIT_MESSAGE" \
           --arg service_version "$SERVICE_VERSION" \
-          --arg service "$DEPLOY_SERVICE" \
           --arg destination "$DEPLOY_DESTINATION" \
           --arg recorded_at "$RECORDED_AT" \
-          '{deploy: {status: $status, performer: $performer, version: $version, commit_message: $commit_message, service_version: $service_version, service: $service, destination: $destination, command: "deploy", recorded_at: $recorded_at}}')
+          '{deploy: {status: $status, performer: $performer, version: $version, commit_message: $commit_message, service_version: $service_version, destination: $destination, command: "deploy", recorded_at: $recorded_at}}')
 
         HTTP_STATUS=$(curl -s -o /tmp/shipyrd_response.json -w "%{http_code}" \
           -X POST "${SHIPYRD_URL}/deploys.json" \

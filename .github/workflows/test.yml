@@ -26,7 +26,6 @@ jobs:
           api-token: test-token
           shipyrd-url: http://localhost:8080
           status: pre-deploy
-          service: test-app
           destination: staging
 
   test-post-deploy:
@@ -49,7 +48,6 @@ jobs:
         with:
           api-token: test-token
           shipyrd-url: http://localhost:8080
-          service: test-app
 
   test-failed:
     name: Test failed notification
@@ -72,7 +70,6 @@ jobs:
           api-token: test-token
           shipyrd-url: http://localhost:8080
           status: failed
-          service: test-app
 
   test-auth-failure:
     name: Test auth failure exits non-zero
@@ -96,7 +93,6 @@ jobs:
         with:
           api-token: bad-token
           shipyrd-url: http://localhost:8080
-          service: test-app
 
       - name: Verify step failed
         shell: bash
