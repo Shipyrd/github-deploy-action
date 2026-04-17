@@ -1,0 +1,108 @@
+name: Test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-pre-deploy:
+    name: Test pre-deploy notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start mock server
+        shell: bash
+        run: |
+          while true; do
+            echo -e "HTTP/1.1 201 Created\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}" \
+              | nc -l 8080 -q 1
+          done &
+          sleep 0.5
+
+      - name: Run action (pre-deploy)
+        uses: ./
+        with:
+          api-token: test-token
+          shipyrd-url: http://localhost:8080
+          status: pre-deploy
+          service: test-app
+          destination: staging
+
+  test-post-deploy:
+    name: Test post-deploy notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start mock server
+        shell: bash
+        run: |
+          while true; do
+            echo -e "HTTP/1.1 201 Created\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}" \
+              | nc -l 8080 -q 1
+          done &
+          sleep 0.5
+
+      - name: Run action (post-deploy, default status)
+        uses: ./
+        with:
+          api-token: test-token
+          shipyrd-url: http://localhost:8080
+          service: test-app
+
+  test-failed:
+    name: Test failed notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start mock server
+        shell: bash
+        run: |
+          while true; do
+            echo -e "HTTP/1.1 201 Created\r\nContent-Type: application/json\r\nContent-Length: 2\r\n\r\n{}" \
+              | nc -l 8080 -q 1
+          done &
+          sleep 0.5
+
+      - name: Run action (failed)
+        uses: ./
+        with:
+          api-token: test-token
+          shipyrd-url: http://localhost:8080
+          status: failed
+          service: test-app
+
+  test-auth-failure:
+    name: Test auth failure exits non-zero
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Start mock server (returns 401)
+        shell: bash
+        run: |
+          while true; do
+            echo -e "HTTP/1.1 401 Unauthorized\r\nContent-Type: application/json\r\nContent-Length: 24\r\n\r\n{\"error\":\"Invalid token\"}" \
+              | nc -l 8080 -q 1
+          done &
+          sleep 0.5
+
+      - name: Run action (should fail)
+        id: notify
+        uses: ./
+        continue-on-error: true
+        with:
+          api-token: bad-token
+          shipyrd-url: http://localhost:8080
+          service: test-app
+
+      - name: Verify step failed
+        shell: bash
+        run: |
+          if [ "${{ steps.notify.outcome }}" != "failure" ]; then
+            echo "Expected action to fail on 401 but it succeeded"
+            exit 1
+          fi
+          echo "Correctly failed on 401"
