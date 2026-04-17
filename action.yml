@@ -1,0 +1,93 @@
+name: "Shipyrd Deploy Notification"
+description: "Notify Shipyrd of deploy lifecycle events from your GitHub Actions workflow."
+author: "Shipyrd"
+
+branding:
+  icon: "send"
+  color: "blue"
+
+inputs:
+  api-token:
+    description: "Your Shipyrd API token (from Application Settings). Store this as a GitHub Actions secret."
+    required: true
+
+  shipyrd-url:
+    description: "Base URL of your Shipyrd instance. Override if self-hosted."
+    required: false
+    default: "https://hooks.shipyrd.io"
+
+  status:
+    description: "Deploy lifecycle status: 'pre-deploy', 'post-deploy', or 'failed'."
+    required: false
+    default: "post-deploy"
+
+  service:
+    description: "The service name to include in the service_version field (e.g. my-app). Optional — the application is identified by the API token."
+    required: false
+    default: ""
+
+  destination:
+    description: "The deploy destination (e.g. production, staging)."
+    required: false
+    default: "production"
+
+  performer:
+    description: "The person or identity performing the deploy."
+    required: false
+    default: "${{ github.actor }}"
+
+  version:
+    description: "The git SHA being deployed."
+    required: false
+    default: "${{ github.sha }}"
+
+  commit-message:
+    description: "The commit message for this deploy."
+    required: false
+    default: "${{ github.event.head_commit.message }}"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Notify Shipyrd
+      shell: bash
+      env:
+        SHIPYRD_TOKEN: ${{ inputs.api-token }}
+        SHIPYRD_URL: ${{ inputs.shipyrd-url }}
+        DEPLOY_STATUS: ${{ inputs.status }}
+        DEPLOY_SERVICE: ${{ inputs.service }}
+        DEPLOY_DESTINATION: ${{ inputs.destination }}
+        DEPLOY_PERFORMER: ${{ inputs.performer }}
+        DEPLOY_VERSION: ${{ inputs.version }}
+        DEPLOY_COMMIT_MESSAGE: ${{ inputs.commit-message || env.COMMIT_MESSAGE }}
+      run: |
+        RECORDED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+        SERVICE_VERSION="${DEPLOY_SERVICE:+${DEPLOY_SERVICE}@}${DEPLOY_VERSION}"
+
+        PAYLOAD=$(jq -n \
+          --arg status "$DEPLOY_STATUS" \
+          --arg performer "$DEPLOY_PERFORMER" \
+          --arg version "$DEPLOY_VERSION" \
+          --arg commit_message "$DEPLOY_COMMIT_MESSAGE" \
+          --arg service_version "$SERVICE_VERSION" \
+          --arg destination "$DEPLOY_DESTINATION" \
+          --arg recorded_at "$RECORDED_AT" \
+          '{deploy: {status: $status, performer: $performer, version: $version, commit_message: $commit_message, service_version: $service_version, destination: $destination, command: "deploy", recorded_at: $recorded_at}}')
+
+        HTTP_STATUS=$(curl -s -o /tmp/shipyrd_response.json -w "%{http_code}" \
+          -X POST "${SHIPYRD_URL}/deploys.json" \
+          -H "Authorization: Bearer ${SHIPYRD_TOKEN}" \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD")
+
+        if [ "$HTTP_STATUS" -eq 201 ]; then
+          echo "Shipyrd notified (${DEPLOY_STATUS} for ${SERVICE_VERSION} → ${DEPLOY_DESTINATION})"
+        elif [ "$HTTP_STATUS" -eq 401 ]; then
+          echo "::error::Shipyrd authentication failed. Check that your api-token secret is set correctly."
+          exit 1
+        elif [ "$HTTP_STATUS" -eq 422 ]; then
+          echo "::error::Shipyrd rejected the notification: $(cat /tmp/shipyrd_response.json)"
+          exit 1
+        else
+          echo "::warning::Shipyrd returned unexpected status ${HTTP_STATUS}: $(cat /tmp/shipyrd_response.json)"
+        fi

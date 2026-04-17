@@ -1,0 +1,48 @@
+name: Test (local)
+
+on:
+  workflow_dispatch:
+    inputs:
+      shipyrd-url:
+        description: "Base URL of your local Shipyrd instance."
+        required: true
+
+jobs:
+  test-pre-deploy:
+    name: Test pre-deploy notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run action (pre-deploy)
+        uses: ./
+        with:
+          api-token: ${{ secrets.SHIPYRD_TOKEN }}
+          shipyrd-url: ${{ inputs.shipyrd-url }}
+          status: pre-deploy
+          destination: staging
+
+  test-post-deploy:
+    name: Test post-deploy notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run action (post-deploy, default status)
+        uses: ./
+        with:
+          api-token: ${{ secrets.SHIPYRD_TOKEN }}
+          shipyrd-url: ${{ inputs.shipyrd-url }}
+
+  test-failed:
+    name: Test failed notification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run action (failed)
+        uses: ./
+        with:
+          api-token: ${{ secrets.SHIPYRD_TOKEN }}
+          shipyrd-url: ${{ inputs.shipyrd-url }}
+          status: failed
