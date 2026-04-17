@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+echo "Setting up github-deploy-action development environment..."
+
+# Install act for local GitHub Actions testing
+if command -v act &>/dev/null; then
+  echo "act already installed: $(act --version)"
+else
+  echo "Installing act..."
+  brew install act
+  echo "act installed: $(act --version)"
+fi
+
+echo ""
+echo "Setup complete. See README.md for local testing instructions."
