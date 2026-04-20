@@ -7,12 +7,17 @@ on:
         description: "Base URL of your local Shipyrd instance."
         required: true
 
+permissions:
+  contents: read
+
 jobs:
   test-pre-deploy:
     name: Test pre-deploy notification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Run action (pre-deploy)
         uses: ./
@@ -26,7 +31,9 @@ jobs:
     name: Test post-deploy notification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Run action (post-deploy, default status)
         uses: ./
@@ -38,7 +45,9 @@ jobs:
     name: Test failed notification
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Run action (failed)
         uses: ./
